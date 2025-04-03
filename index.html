@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Field Agent Network</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --neon-text-color: #00ff9d;
+            --neon-border-color: #08f;
+            --secondary-color: #9929bd;
+        }
+        body {
+            background-color: #0a0a1f;
+            font-family: 'Share Tech Mono', monospace;
+            color: #0ff;
+            background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(10, 10, 31, 0.9)), 
+                              url('https://images.unsplash.com/photo-1531297484001-80022131f5a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1400&q=80');
+            background-size: cover;
+            background-attachment: fixed;
+        }
+        .cyberpunk-title {
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 5px var(--neon-text-color), 0 0 10px var(--secondary-color);
+        }
+        .agent-card {
+            background: rgba(0, 30, 60, 0.8);
+            border: 2px solid var(--neon-border-color);
+            box-shadow: 0 0 10px var(--neon-border-color);
+            transition: all 0.3s ease;
+        }
+        .agent-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px var(--neon-text-color);
+        }
+        .typing-effect::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .secondary-btn {
+            background-color: var(--secondary-color);
+        }
+        .secondary-btn:hover {
+            background-color: #b237d8;
+        }
+        .chat-backdrop {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .glitch-effect {
+            position: relative;
+        }
+        .glitch-effect:after {
+            content: attr(data-text);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            text-shadow: -1px 0 2px var(--secondary-color);
+            animation: glitch 0.3s ease infinite;
+        }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            60% { transform: translate(1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+            100% { transform: translate(0); }
+        }
+        .workflow-node {
+            background: rgba(0, 30, 60, 0.8);
+            border: 2px solid var(--neon-border-color);
+        }
+        .workflow-line {
+            border-color: var(--neon-text-color);
+            position: absolute;
+        }
+        .drop-zone {
+            border: 2px dashed var(--neon-border-color);
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover, .drop-zone.active {
+            border-color: var(--neon-text-color);
+            box-shadow: 0 0 10px var(--neon-text-color);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 30, 60, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-text-color);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div id="app">
+        <header class="flex flex-col md:flex-row justify-center md:justify-between items-center mb-10 px-4">
+            <div class="flex items-center mb-4 md:mb-0">
+                <img src="https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/logos%2Ffile-kyYGwfYbYSHPA9COR4eaBYxw_AGI%20Logo%20%20_simple_.png?alt=media&token=cc5165a6-53a0-479a-98b7-145ca45714a5" 
+                    alt="AGI Corp Logo" 
+                    class="h-16 md:h-20 mr-4">
+                <h1 class="cyberpunk-title text-3xl md:text-5xl text-[#00ff9d] glitch-effect" data-text="IT Field Agent Network">IT Field Agent Network</h1>
+            </div>
+            <div>
+                <button @click="showWorkflowMap = !showWorkflowMap" 
+                    class="py-2 px-4 bg-[#08f] hover:bg-[#00ff9d] text-black font-bold rounded transition-colors duration-300 mr-2">
+                    <i class="bi bi-diagram-3"></i> {{ showWorkflowMap ? 'Hide Workflow' : 'Show Workflow' }}
+                </button>
+                <button @click="showChat = !showChat" 
+                    class="py-2 px-4 secondary-btn text-white font-bold rounded transition-colors duration-300">
+                    <i class="bi bi-chat-dots-fill"></i> Chat with Eliza
+                </button>
+            </div>
+        </header>
+
+        <div v-if="showWorkflowMap" class="max-w-7xl mx-auto mb-8 p-6 rounded-xl agent-card overflow-auto">
+            <h2 class="cyberpunk-title text-2xl mb-4 text-[#00ff9d]">Agent Swarm Workflow</h2>
+            <div class="relative h-[500px] overflow-auto p-4">
+                <!-- Workflow nodes -->
+                <div class="workflow-node rounded-lg p-4 absolute top-10 left-1/2 transform -translate-x-1/2 text-center w-60">
+                    <h3 class="font-bold text-[#00ff9d]">Query Input</h3>
+                    <p class="text-xs">Text or File Upload</p>
+                </div>
+                <div class="workflow-line border-l-2 h-16 left-1/2 top-28"></div>
+                
+                <div class="workflow-node rounded-lg p-4 absolute top-44 left-1/2 transform -translate-x-1/2 text-center w-60">
+                    <h3 class="font-bold text-[#00ff9d]">Query Analysis</h3>
+                    <p class="text-xs">Pattern Recognition & Intent Detection</p>
+                </div>
+                <div class="workflow-line border-l-2 h-16 left-1/2 top-64"></div>
+                
+                <div class="workflow-node rounded-lg p-4 absolute top-80 left-1/4 transform -translate-x-1/2 text-center w-60">
+                    <h3 class="font-bold text-[#00ff9d]">Agent Selection</h3>
+                    <p class="text-xs">Matching expertise to query</p>
+                </div>
+                <div class="workflow-node rounded-lg p-4 absolute top-80 left-3/4 transform -translate-x-1/2 text-center w-60">
+                    <h3 class="font-bold text-[#00ff9d]">Knowledge Base</h3>
+                    <p class="text-xs">Access to IT resources</p>
+                </div>
+                <div class="workflow-line border-t-2 w-40 top-[328px] left-[calc(25%-80px)]"></div>
+                <div class="workflow-line border-t-2 w-40 top-[328px] right-[calc(25%-80px)]"></div>
+                <div class="workflow-line border-l-2 h-16 left-1/2 top-80"></div>
+
+                <div class="workflow-node rounded-lg p-4 absolute top-[380px] left-1/2 transform -translate-x-1/2 text-center w-60">
+                    <h3 class="font-bold text-[#00ff9d]">Response Generation</h3>
+                    <p class="text-xs">Collaborative solution creation</p>
+                </div>
+                <div class="workflow-line border-l-2 h-16 left-1/2 top-[428px]"></div>
+
+                <div class="workflow-node rounded-lg p-4 absolute top-[460px] left-1/2 transform -translate-x-1/2 text-center w-60">
+                    <h3 class="font-bold text-[#00ff9d]">Output Delivery</h3>
+                    <p class="text-xs">Formatted solution presentation</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="max-w-7xl mx-auto mb-8">
+            <div class="mb-6 p-6 rounded-xl agent-card">
+                <h2 class="cyberpunk-title text-2xl mb-4 text-[#00ff9d]">Query the Agent Swarm</h2>
+                <div class="drop-zone p-6 rounded-lg text-center mb-4" 
+                    :class="{ 'active': isDragging }"
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleFileDrop">
+                    <i class="bi bi-cloud-upload text-4xl mb-2"></i>
+                    <p class="mb-2">Drag & drop files or images here</p>
+                    <p class="text-sm opacity-70">- or -</p>
+                    <input type="file" id="file-upload" @change="handleFileSelect" class="hidden" accept="image/*,application/pdf,text/plain">
+                    <button @click="triggerFileInput" class="mt-3 py-2 px-4 secondary-btn text-white font-bold rounded transition-colors duration-300">
+                        Browse Files
+                    </button>
+                </div>
+                <div v-if="uploadedFiles.length > 0" class="mb-4">
+                    <h3 class="text-lg mb-2">Uploaded Files:</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <div v-for="(file, index) in uploadedFiles" :key="index" 
+                            class="flex items-center bg-gray-800 rounded-lg p-2">
+                            <span>{{ file.name }}</span>
+                            <button @click="removeFile(index)" class="ml-2 text-red-400 hover:text-red-300">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <textarea v-model="queryText" placeholder="Enter your IT-related question here..." 
+                    class="w-full h-24 p-4 bg-transparent border-2 border-[#08f] text-[#0ff] rounded-lg focus:outline-none focus:border-[#00ff9d] mb-4"></textarea>
+                <div class="flex justify-end">
+                    <button @click="submitQuery" 
+                        class="py-2 px-6 bg-[#08f] hover:bg-[#00ff9d] text-black font-bold rounded transition-colors duration-300">
+                        <i class="bi bi-send"></i> Submit Query
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-8">
+                <input type="text" v-model="searchQuery" @input="filterAgents" placeholder="Search for skills, roles, or requirements..." 
+                    class="w-full p-4 bg-transparent border-2 border-[#08f] text-[#0ff] rounded-lg focus:outline-none focus:border-[#00ff9d]">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div v-for="agent in filteredAgents" :key="agent.title" class="agent-card rounded-xl p-6">
+                    <h3 class="text-xl font-bold mb-3 cyberpunk-title">{{ agent.title }}</h3>
+                    <p class="text-sm mb-4">{{ agent.description }}</p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span v-for="skill in agent.skills" :key="skill" 
+                            class="px-2 py-1 text-xs bg-[#00ff9d] text-black rounded">{{ skill }}</span>
+                    </div>
+                    <button @click="connectWithAgent(agent)" 
+                        class="w-full py-2 px-4 bg-[#08f] hover:bg-[#00ff9d] text-black font-bold rounded transition-colors duration-300">
+                        Connect <i class="bi bi-lightning-charge-fill"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div v-if="showChat" class="fixed bottom-4 right-4 w-full max-w-md h-[500px] chat-backdrop bg-opacity-90 bg-gray-900 rounded-xl border-2 border-[#08f] flex flex-col shadow-2xl z-50 overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b border-[#08f]">
+                <h3 class="cyberpunk-title text-xl text-[#00ff9d]">Eliza Agent Swarm</h3>
+                <button @click="showChat = false" class="text-[#0ff] hover:text-[#00ff9d]">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="flex-1 p-4 overflow-y-auto" ref="chatMessages">
+                <div v-for="(message, index) in chatMessages" :key="index" 
+                    :class="['mb-4', 'p-3', 'rounded-lg', 'max-w-[80%]', 
+                    message.sender === 'user' ? 'ml-auto bg-[#08f] text-black' : 'bg-gray-800 text-[#0ff]']">
+                    <p>{{ message.text }}</p>
+                </div>
+                <div v-if="chatLoading" class="typing-indicator flex space-x-1 mb-4 p-3 rounded-lg bg-gray-800 w-24">
+                    <div class="w-2 h-2 bg-[#00ff9d] rounded-full animate-pulse"></div>
+                    <div class="w-2 h-2 bg-[#00ff9d] rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+                    <div class="w-2 h-2 bg-[#00ff9d] rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-[#08f]">
+                <form @submit.prevent="sendChatMessage" class="flex">
+                    <input type="text" v-model="chatInput" placeholder="Ask about IT careers or tools..." 
+                        class="flex-1 p-2 bg-transparent border-2 border-[#08f] text-[#0ff] rounded-lg focus:outline-none focus:border-[#00ff9d]">
+                    <button type="submit" class="ml-2 p-2 bg-[#08f] hover:bg-[#00ff9d] text-black rounded-lg">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    searchQuery: '',
+                    queryText: '',
+                    uploadedFiles: [],
+                    fileUrls: [],
+                    isDragging: false,
+                    showChat: false,
+                    chatInput: '',
+                    chatMessages: [
+                        { sender: 'bot', text: 'Welcome to the Healthcare Agent Network. How can I help you with your health needs today?' }
+                    ],
+                    chatLoading: false,
+                    showWorkflowMap: false,
+                    agents: [
+                        {
+                            title: 'Security Specialist',
+                            description: 'Specialized in cybersecurity threat detection, penetration testing, and security architecture with focus on zero-trust implementation.',
+                            skills: ['Cyber Security', 'Penetration Testing', 'SIEM Tools', 'Threat Intelligence', 'Zero Trust Architecture']
+                        },
+                        {
+                            title: 'Full Stack Developer',
+                            description: 'Expert in both frontend and backend development with focus on modern tech stack and microservice architecture implementation.',
+                            skills: ['Vue.js', 'React', 'Node.js', 'MongoDB', 'GraphQL', 'Microservices']
+                        },
+                        {
+                            title: 'Cloud Architect',
+                            description: 'Designs and implements scalable cloud infrastructure solutions with multi-cloud expertise and cost optimization strategies.',
+                            skills: ['AWS', 'Azure', 'GCP', 'Terraform', 'Docker', 'Kubernetes', 'Serverless']
+                        },
+                        {
+                            title: 'Data Scientist',
+                            description: 'Specializes in machine learning, deep learning and predictive analytics with focus on solving complex business problems.',
+                            skills: ['Python', 'TensorFlow', 'PyTorch', 'NLP', 'Computer Vision', 'Statistical Analysis']
+                        },
+                        {
+                            title: 'DevOps Engineer',
+                            description: 'Streamlines development operations with continuous integration/deployment pipelines and infrastructure automation.',
+                            skills: ['CI/CD', 'Jenkins', 'GitLab', 'Ansible', 'Infrastructure as Code', 'Monitoring']
+                        },
+                        {
+                            title: 'UI/UX Designer',
+                            description: 'Creates intuitive and engaging user experiences with focus on accessibility and modern design patterns.',
+                            skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems', 'Accessibility', 'Interaction Design']
+                        },
+                        {
+                            title: 'Database Administrator',
+                            description: 'Expert in database management, optimization, and security with experience in both SQL and NoSQL technologies.',
+                            skills: ['SQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Database Security', 'Performance Tuning']
+                        },
+                        {
+                            title: 'Network Engineer',
+                            description: 'Designs and manages complex network infrastructures with expertise in software-defined networking and security.',
+                            skills: ['Cisco', 'CCNA/CCNP', 'SD-WAN', 'Network Security', 'TCP/IP', 'BGP']
+                        },
+                        {
+                            title: 'IT Director',
+                            description: 'Strategic leader who aligns technology initiatives with business goals and manages enterprise IT operations.',
+                            skills: ['IT Strategy', 'Team Leadership', 'Budget Management', 'Vendor Relations', 'Digital Transformation']
+                        },
+                        {
+                            title: 'Software Architect',
+                            description: 'Designs robust software systems with focus on scalability, maintainability and modern architectural patterns.',
+                            skills: ['System Design', 'Microservices', 'API Design', 'Domain-Driven Design', 'Cloud-Native Architecture']
+                        },
+                        {
+                            title: 'AI/ML Engineer',
+                            description: 'Develops and deploys machine learning models and AI systems with focus on production-ready solutions.',
+                            skills: ['Machine Learning', 'MLOps', 'Neural Networks', 'Production ML', 'Feature Engineering']
+                        },
+                        {
+                            title: 'Information Security Manager',
+                            description: 'Leads security initiatives and ensures compliance with regulations while protecting organizational assets.',
+                            skills: ['Risk Management', 'Compliance (GDPR, HIPAA)', 'Security Frameworks', 'Incident Response', 'Security Training']
+                        }
+                    ],
+                    filteredAgents: []
+                }
+            },
+            mounted() {
+                this.filteredAgents = this.agents
+            },
+            watch: {
+                chatMessages() {
+                    this.$nextTick(() => {
+                        this.scrollToBottom()
+                    })
+                },
+                showChat(newVal) {
+                    if (newVal) {
+                        this.$nextTick(() => {
+                            this.scrollToBottom()
+                        })
+                    }
+                }
+            },
+            methods: {
+                scrollToBottom() {
+                    if (this.$refs.chatMessages) {
+                        this.$refs.chatMessages.scrollTop = this.$refs.chatMessages.scrollHeight
+                    }
+                },
+                filterAgents() {
+                    const query = this.searchQuery.toLowerCase()
+                    this.filteredAgents = this.agents.filter(agent => {
+                        return agent.title.toLowerCase().includes(query) ||
+                               agent.description.toLowerCase().includes(query) ||
+                               agent.skills.some(skill => skill.toLowerCase().includes(query))
+                    })
+                },
+                async connectWithAgent(agent) {
+                    try {
+                        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                appSlug: 'it-field-agents-123456',
+                                action: 'create',
+                                collection: 'connections',
+                                data: {
+                                    agentTitle: agent.title,
+                                    timestamp: new Date().toISOString(),
+                                    status: 'pending'
+                                }
+                            })
+                        })
+                        const data = await response.json()
+                        if(data.success) {
+                            // Open chat and initiate conversation with the selected agent
+                            this.showChat = true
+                            this.chatMessages.push({ 
+                                sender: 'bot', 
+                                text: `You're now connected with the ${agent.title} agent. How can I assist you with ${agent.skills.join(", ")}?` 
+                            })
+                        }
+                    } catch(error) {
+                        console.error('Error connecting with agent:', error)
+                        alert('Failed to connect with agent. Please try again later.')
+                    }
+                },
+                triggerFileInput() {
+                    document.getElementById('file-upload').click()
+                },
+                handleFileSelect(e) {
+                    const files = e.target.files
+                    if (files.length) {
+                        this.processFiles(Array.from(files))
+                    }
+                },
+                handleFileDrop(e) {
+                    this.isDragging = false
+                    const files = Array.from(e.dataTransfer.files)
+                    if (files.length) {
+                        this.processFiles(files)
+                    }
+                },
+                async processFiles(files) {
+                    for (const file of files) {
+                        // Add to local array for UI display
+                        this.uploadedFiles.push(file)
+                        
+                        // Upload to storage service
+                        try {
+                            const formData = new FormData()
+                            formData.append('file', file)
+                            formData.append('userId', 'user-' + Math.floor(Math.random() * 10000))
+                            formData.append('appSlug', 'it-field-agents-123456')
+                            
+                            const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/storage/upload', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12'
+                                },
+                                body: formData
+                            })
+                            
+                            const data = await response.json()
+                            if (data.success) {
+                                this.fileUrls.push(data.url)
+                            }
+                        } catch (error) {
+                            console.error('Error uploading file:', error)
+                        }
+                    }
+                },
+                removeFile(index) {
+                    this.uploadedFiles.splice(index, 1)
+                    if (this.fileUrls[index]) {
+                        this.fileUrls.splice(index, 1)
+                    }
+                },
+                async submitQuery() {
+                    if (!this.queryText && this.uploadedFiles.length === 0) {
+                        alert('Please enter a question or upload a file to analyze.')
+                        return
+                    }
+                    
+                    // Open chat and show the query
+                    this.showChat = true
+                    this.chatMessages.push({ sender: 'user', text: this.queryText || 'Analyze uploaded files' })
+                    this.chatLoading = true
+                    
+                    try {
+                        // Prepare the messages array
+                        const messages = [
+                            {
+                                role: 'user',
+                                content: []
+                            }
+                        ]
+                        
+                        // Add text if present
+                        if (this.queryText) {
+                            messages[0].content.push({
+                                type: 'text',
+                                text: this.queryText
+                            })
+                        }
+                        
+                        // Add images if present
+                        for (const url of this.fileUrls) {
+                            messages[0].content.push({
+                                type: 'image_url',
+                                image_url: {
+                                    url: url
+                                }
+                            })
+                        }
+                        
+                        // Send the request to AI endpoint
+                        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/ai', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ messages })
+                        })
+                        
+                        const data = await response.json()
+                        // Add AI response to chat
+                        this.chatMessages.push({ sender: 'bot', text: data.message || 'I analyzed your query but encountered an issue. Please try again.' })
+                        
+                        // Clear form
+                        this.queryText = ''
+                        this.uploadedFiles = []
+                        this.fileUrls = []
+                        
+                    } catch (error) {
+                        console.error('Error processing query:', error)
+                        this.chatMessages.push({ sender: 'bot', text: 'Sorry, I encountered an error processing your request. Please try again later.' })
+                    } finally {
+                        this.chatLoading = false
+                    }
+                },
+                async sendChatMessage() {
+                    if (!this.chatInput.trim()) return
+                    
+                    const userMessage = this.chatInput.trim()
+                    this.chatMessages.push({ sender: 'user', text: userMessage })
+                    this.chatInput = ''
+                    this.chatLoading = true
+                    
+                    try {
+                        // Send request to AI endpoint
+                        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/ai', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                messages: [
+                                    {
+                                        role: 'user',
+                                        content: [
+                                            {
+                                                type: 'text',
+                                                text: userMessage
+                                            }
+                                        ]
+                                    }
+                                ]
+                            })
+                        })
+                        
+                        const data = await response.json()
+                        this.chatMessages.push({ sender: 'bot', text: data.message || 'I processed your message but encountered an issue. Please try again.' })
+                        
+                    } catch (error) {
+                        console.error('Error sending chat message:', error)
+                        this.chatMessages.push({ sender: 'bot', text: 'Sorry, I encountered an error processing your message. Please try again.' })
+                    } finally {
+                        this.chatLoading = false
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
